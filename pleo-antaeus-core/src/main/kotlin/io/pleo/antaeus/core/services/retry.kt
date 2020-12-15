@@ -10,7 +10,9 @@ import kotlin.random.Random
  *
  * @param maxRetryCount the number of times the action will be retried excluding the initial attempt.
  * @param retryDelayMs the initial delay in milliseconds which will increase exponentially on subsequent attempts.
- * @param canBeRetried callback to determine if the action should be retried on a given error or exception.
+ * @param sleep optional sleep function. Can be injected for testing.
+ * @param randomBetween optional random function. Can be injected for testing.
+ * @param canBeRetried function to determine if the action should be retried on a given error or exception.
  * @param action the action to retry.
  */
 fun createRetry(

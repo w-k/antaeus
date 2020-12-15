@@ -5,12 +5,15 @@
 
 package io.pleo.antaeus.data
 
-import io.pleo.antaeus.models.Currency
-import io.pleo.antaeus.models.Customer
-import io.pleo.antaeus.models.Invoice
-import io.pleo.antaeus.models.InvoiceStatus
-import io.pleo.antaeus.models.Money
+import io.pleo.antaeus.models.*
 import org.jetbrains.exposed.sql.ResultRow
+
+fun getFailureReason(string: String?): FailureReason? {
+    if (string == null) {
+        return null
+    }
+    return FailureReason.valueOf(string);
+}
 
 fun ResultRow.toInvoice(): Invoice = Invoice(
     id = this[InvoiceTable.id],
@@ -19,7 +22,8 @@ fun ResultRow.toInvoice(): Invoice = Invoice(
         currency = Currency.valueOf(this[InvoiceTable.currency])
     ),
     status = InvoiceStatus.valueOf(this[InvoiceTable.status]),
-    customerId = this[InvoiceTable.customerId]
+    customerId = this[InvoiceTable.customerId],
+    failureReason = getFailureReason(this[InvoiceTable.failureReason])
 )
 
 fun ResultRow.toCustomer(): Customer = Customer(

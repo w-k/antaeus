@@ -24,6 +24,8 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import setupInitialData
 import java.io.File
 import java.sql.Connection
+import java.time.Clock
+import java.util.*
 
 fun main() {
     // The tables to create in the database.
@@ -32,10 +34,12 @@ fun main() {
     val dbFile: File = File.createTempFile("antaeus-db", ".sqlite")
     // Connect to the database and create the needed tables. Drop any existing data.
     val db = Database
-        .connect(url = "jdbc:sqlite:${dbFile.absolutePath}",
+        .connect(
+            url = "jdbc:sqlite:${dbFile.absolutePath}",
             driver = "org.sqlite.JDBC",
             user = "root",
-            password = "")
+            password = ""
+        )
         .also {
             TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
             transaction(it) {
@@ -60,10 +64,9 @@ fun main() {
     val invoiceService = InvoiceService(dal = dal)
     val customerService = CustomerService(dal = dal)
 
-    // This is _your_ billing service to be included where you see fit
-    val billingService = BillingService(paymentProvider, invoiceService)
-    billingService.start();
-    println("Started billing service")
+    // Create billing service and start scheduling monthly processing.
+    val billingService = BillingService(paymentProvider, invoiceService, Clock.systemUTC(), Timer())
+    billingService.startScheduling();
 
     // Create REST web service
     AntaeusRest(

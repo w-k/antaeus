@@ -82,7 +82,7 @@ class BillingService(
     }
 
     private val withRetry =
-        createRetry(numberOfRetries = 3, initialDelayMs = 100, jitterRatio = 0.2, isRetriable = { it is NetworkException })
+        createRetry(maxRetryCount = 3, retryDelayMs = 100, canBeRetried = { it is NetworkException })
 
     private fun processSingleInvoice(invoice: Invoice) {
         try {

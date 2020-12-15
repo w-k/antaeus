@@ -1,41 +1,47 @@
 package io.pleo.antaeus.core.services
 
+import kotlin.math.pow
 import kotlin.random.Random
 
 /**
- * Creates a retry function based on parameters. Exponential backoff and jitter are in place to avoid
- * overwhelming the remote API with a retry storm.
+ * Creates a retry function based on parameters. Exponential backoff and full jitter are in place to avoid
+ * overwhelming the remote API with a retry storm. See this blog post for more information on these concepts:
+ * https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
  *
- * @param numberOfRetries the number of times the action will be retried excluding the initial attempt.
- * @param isRetriable callback to determine if the action should be retried on a given exception.
+ * @param maxRetryCount the number of times the action will be retried excluding the initial attempt.
+ * @param retryDelayMs the initial delay in milliseconds which will increase exponentially on subsequent attempts.
+ * @param canBeRetried callback to determine if the action should be retried on a given error or exception.
  * @param action the action to retry.
  */
 fun createRetry(
-    numberOfRetries: Long,
-    initialDelayMs: Long = 200,
-    // TODO: find a more descriptive name for this parameter
-    jitterRatio: Double = 0.2,
-    isRetriable: (Exception) -> Boolean
+    maxRetryCount: Int,
+    retryDelayMs: Int = 100,
+    sleep: (Long) -> Unit = Thread::sleep,
+    randomBetween: (Double, Double) -> Double = Random.Default::nextDouble,
+    canBeRetried: (Throwable) -> Boolean
 ): (action: () -> Unit) -> Unit {
     return { action ->
-        var retryCount = 0
-        while (true) {
-            if (retryCount > 0) {
-                val baseDelay = retryCount * initialDelayMs
-                val jitter = Random.nextDouble(-baseDelay*jitterRatio,baseDelay*jitterRatio)
-                Thread.sleep(
-                    kotlin.math.ceil(baseDelay+jitter).toLong()
-                )
-            }
-            try {
-                action()
-                break
-            } catch (e: Exception) {
-                if (isRetriable(e) && retryCount < numberOfRetries) {
-                    retryCount++
-                    continue
+        try {
+            // Executing the action for the first time without delay.
+            action()
+        } catch (t: Throwable) {
+            var retryCount = 0
+            while (true) {
+                if (!canBeRetried(t) || retryCount >= maxRetryCount) {
+                    throw t
                 }
-                throw e
+                val delay = 2.0.pow(retryCount) * retryDelayMs
+                val delayWithJitter = randomBetween(0.0, delay)
+                sleep(
+                    kotlin.math.ceil(delayWithJitter).toLong()
+                )
+                try {
+                    action()
+                    // Action executed without errors, breaking out of the loop.
+                    break
+                } catch (t: Throwable) {
+                    retryCount++
+                }
             }
         }
     }

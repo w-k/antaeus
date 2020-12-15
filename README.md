@@ -1,6 +1,6 @@
 # Antaeus - Pawel's Readme
 
-_See original readme [here](README.md)._
+_See original readme [here](README_ORIGINAL.md)._
 
 ## Billing Service
 
